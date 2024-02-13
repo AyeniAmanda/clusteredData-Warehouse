@@ -2,8 +2,7 @@ package com.example.clustereddatawarehouse.service.serviceImpl;
 
 
 import com.example.clustereddatawarehouse.dto.DealRequestDto;
-import com.example.clustereddatawarehouse.dto.DealResponseDto;
-import com.example.clustereddatawarehouse.exceptions.InvalidRequestFieldException;
+import com.example.clustereddatawarehouse.exceptions.InvalidRequestException;
 import com.example.clustereddatawarehouse.model.Deal;
 import com.example.clustereddatawarehouse.repository.DealsRepository;
 import com.example.clustereddatawarehouse.service.DealsService;
@@ -12,6 +11,7 @@ import com.example.clustereddatawarehouse.service.validator.DealError;
 import com.example.clustereddatawarehouse.service.validator.DealValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -32,6 +32,7 @@ import static org.mockito.Mockito.*;
 
 @Slf4j
 @ExtendWith(MockitoExtension.class)
+@DisplayName("DealsServiceImpl Tests")
 class DealsServiceImplTest {
 
     @Mock
@@ -44,83 +45,90 @@ class DealsServiceImplTest {
     DealValidator validator;
 
     DealsService dealsService;
+
     @BeforeEach
-    void setUp(){
+    void setUp() {
         dealsService = new DealsServiceImpl(dealsRepository, dealMapper, validator);
     }
 
+
     @Test
-    void saveDealWhenNoDealExist() {
-        DealRequestDto requestDto = createDealRequest();
-        Deal deal = createDeal(requestDto);
-        lenient().when(dealsRepository.findByDealUniqueId(anyString()))
-                .thenReturn(Optional.empty());
-        lenient().when(dealsRepository.save(deal)).
-                thenReturn(deal);
-        lenient().when(dealMapper.mapToDealEntity(requestDto))
-                        .thenReturn(deal);
-        DealResponseDto responseDto = dealsService.saveDeal(requestDto);
-        verify(validator, times(1)).validateRequestFields(any(DealRequestDto.class));
-        verify(validator, times(1)).validateDealExistence(requestDto.getDealUniqueId());
-        verify(dealsRepository, times(1)).save(deal);
+    @DisplayName("Get One Deal - Valid Deal Request")
+    void getOneDealWithValidDealRequest() {
+        DealRequestDto dealRequestDto = createValidDealRequest();
+        Deal existingDeal = createDeal(dealRequestDto);
+        when(dealsRepository.findByDealUniqueId(anyString())).thenReturn(Optional.of(existingDeal));
+
+        dealsService.getDeal(dealRequestDto.getDealUniqueId());
+
+        verify(dealsRepository, times(1)).findByDealUniqueId(anyString());
     }
 
     @Test
-    void throwsExceptionWhenOneOrMoreFieldsAreNull(){
+    @DisplayName("Throws Exception When Unique ID Already Exists")
+    void testExceptionThrownWhenUniqueIdAlreadyExists() {
+        DealRequestDto dealRequestDto = createValidDealRequest();
+        Deal deal = createDeal(dealRequestDto);
+        List<DealError> errorList = new ArrayList<>();
+        DealError error = new DealError();
+        error.setMessage("Deal already ex");
+        errorList.add(error);
+
+        lenient().when(dealsRepository.findByDealUniqueId(dealRequestDto.getDealUniqueId())).thenReturn(Optional.of(deal));
+        lenient().when(validator.validateDealExistence("id")).thenReturn(errorList);
+
+        InvalidRequestException ex = assertThrows(InvalidRequestException.class, () ->
+                dealsService.saveDeal(dealRequestDto));
+        assertEquals("Invalid Request fields or Deal already exists", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("Throws Exception When One or More Fields Are Null")
+    void throwsExceptionWhenOneOrMoreFieldsAreNull() {
         DealRequestDto dealRequestDto = DealRequestDto.builder()
                 .dealTimestamp(Instant.now().minusSeconds(90))
                 .build();
         List<DealError> errorList = new ArrayList<>();
         DealError error = new DealError();
-        error.setErrorMessage("deal unique id should not be null");
+        error.setMessage("deal unique id should not be null");
         errorList.add(error);
         error = new DealError();
-        error.setErrorMessage("to currency should not be null");
+        error.setMessage("to currency should not be null");
         errorList.add(error);
 
         error = new DealError();
-        error.setErrorMessage("currency should not be null");
+        error.setMessage("currency should not be null");
         errorList.add(error);
 
         lenient().when(validator.validateRequestFields(dealRequestDto))
                 .thenReturn(errorList);
-        InvalidRequestFieldException ex = assertThrows(InvalidRequestFieldException.class, () -> {
+
+
+        InvalidRequestException ex = assertThrows(InvalidRequestException.class, () -> {
             dealsService.saveDeal(dealRequestDto);
         });
-        assertEquals("Invalid Request fields",ex.getMessage());
+        assertEquals("Invalid Request fields or Deal already exists", ex.getMessage());
     }
 
     @Test
-    void testExceptionThrownWhenUniqueIdAlreadyExists(){
-        DealRequestDto dealRequestDto = createDealRequest();
-        Deal deal = createDeal(dealRequestDto);
-        List<DealError> errorList = new ArrayList<>();
-        DealError error = new DealError();
-        error.setErrorMessage("Deal already ex");
-        errorList.add(error);
+    @DisplayName("Save Deal When No Deal Exists")
+    void saveDealWhenNoDealExist() {
+        DealRequestDto requestDto = createValidDealRequest();
+        Deal deal = createDeal(requestDto);
+        lenient().when(dealsRepository.findByDealUniqueId(anyString())).thenReturn(Optional.empty());
+        lenient().when(dealsRepository.save(deal)).thenReturn(deal);
+        lenient().when(dealMapper.mapToDealEntity(requestDto)).thenReturn(deal);
 
-        lenient().when(dealsRepository.findByDealUniqueId(dealRequestDto.getDealUniqueId()))
-                        .thenReturn(Optional.of(deal));
-        lenient().when(validator.validateDealExistence("id"))
-                .thenReturn(errorList);
+        dealsService.saveDeal(requestDto);
 
-        InvalidRequestFieldException ex = assertThrows(InvalidRequestFieldException.class, () -> {
-            dealsService.saveDeal(dealRequestDto);
-        });
-        assertEquals("Deal already exist",ex.getMessage());
+        // Assert
+        verify(validator, times(1)).validateRequestFields(any(DealRequestDto.class));
+        verify(validator, times(1)).validateDealExistence(requestDto.getDealUniqueId());
+        verify(dealMapper, times(1)).mapToDealEntity(any(DealRequestDto.class));
+        verify(dealsRepository, times(1)).save(deal);
     }
 
-    @Test
-    void testGetOneDeal(){
-        DealRequestDto dealRequestDto = createDealRequest();
-        Deal deal = createDeal(dealRequestDto);
-        when(dealsRepository.findByDealUniqueId(anyString()))
-                .thenReturn(Optional.of(deal));
-        dealsService.getDeal(dealRequestDto.getDealUniqueId());
-        verify(dealsRepository, times(1)).findByDealUniqueId(anyString());
-    }
-
-    private DealRequestDto createDealRequest() {
+    private DealRequestDto createValidDealRequest() {
         return DealRequestDto.builder()
                 .dealUniqueId("id")
                 .toCurrencyISO("NGN")
@@ -130,7 +138,7 @@ class DealsServiceImplTest {
                 .build();
     }
 
-    private Deal createDeal(DealRequestDto requestDto){
+    private Deal createDeal(DealRequestDto requestDto) {
         Currency toCurrency = Currency.getInstance(requestDto.getToCurrencyISO());
         Currency fromCurrency = Currency.getInstance(requestDto.getOrderingCurrencyISO());
 

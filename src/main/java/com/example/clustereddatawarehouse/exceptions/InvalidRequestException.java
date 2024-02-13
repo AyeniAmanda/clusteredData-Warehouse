@@ -6,12 +6,13 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.List;
+
 @Setter
 @Getter
-public class InvalidRequestFieldException extends RuntimeException {
+public class InvalidRequestException extends RuntimeException {
     private final List<DealError> errors;
 
-    public InvalidRequestFieldException(String message, List<DealError> errors) {
+    public InvalidRequestException(String message, List<DealError> errors) {
         super(message);
         this.errors = errors;
     }

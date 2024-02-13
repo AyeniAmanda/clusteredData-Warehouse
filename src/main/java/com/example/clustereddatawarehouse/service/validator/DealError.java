@@ -7,6 +7,6 @@ import lombok.*;
 @Setter
 @Getter
 public class DealError {
-    private String errorMessage;
-    private String rejectedField;
+    private String message;
+    private String field;
 }
