@@ -1,6 +1,6 @@
 # Clustered Data Warehouse
 
-The Clustered Data Warehouse REST API for handling foreign exchange deals details and persisting them in a database. this application helps users create, retrieve,
+The Clustered Data Warehouse is an application that consists of REST API for handling foreign exchange deals details and persisting them in a database. this application helps users create, retrieve,
 and handles foreign exchange information with proper error handling and validations.
 
 # Requirements
