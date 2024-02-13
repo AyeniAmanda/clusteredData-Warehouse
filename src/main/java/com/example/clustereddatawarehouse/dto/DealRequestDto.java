@@ -20,4 +20,5 @@ public class DealRequestDto {
     private Instant dealTimestamp;
 
     private BigDecimal amountInOrderingCurrency;
+
 }
