@@ -3,6 +3,7 @@ package com.example.clustereddatawarehouse.model;
 import lombok.*;
 
 import javax.persistence.*;
+import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Currency;
@@ -19,18 +20,23 @@ public class Deal {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    @Column(nullable = false, name = "deal_id", unique = true)
+    @Column(name = "deal_id", unique = true)
+    @NotNull
     private String dealUniqueId;
 
-    @Column(nullable = false, name = "ordering_currency")
+    @Column(name = "ordering_currency")
+    @NotNull
     private Currency orderingCurrencyISO;
 
-    @Column(nullable = false, name = "to_currency")
+    @Column(name = "to_currency")
+    @NotNull
     private Currency toCurrencyISO;
 
-    @Column(nullable = false, name = "deal_timestamp")
+    @Column(name = "deal_timestamp", columnDefinition = "TIMESTAMP")
+    @NotNull
     private Instant dealTimestamp;
 
-    @Column(nullable = false, name = "amount_in_ordering_currency")
+    @Column(name = "amount_in_ordering_currency")
+    @NotNull
     private BigDecimal amountInOrderingCurrency;
 }
