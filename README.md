@@ -31,6 +31,7 @@ Run the following command in the terminal (with Docker installed):
 ## API Reference
 
 All URIs are relative to *http://localhost:8080*
+URl for docker is *http://localhost:8090*
 
 
 ### Save Deals

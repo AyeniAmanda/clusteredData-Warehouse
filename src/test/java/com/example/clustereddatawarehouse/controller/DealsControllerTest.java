@@ -6,6 +6,7 @@ import com.example.clustereddatawarehouse.dto.DealResponseDto;
 import com.example.clustereddatawarehouse.service.DealsService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -32,18 +33,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class DealsControllerTest {
 
     @Autowired
-    private MockMvc mvc;
+    private MockMvc mockMvc;
 
     @MockBean
     private DealsService dealsService;
 
     @Test
-    public void testSaveDeal() throws Exception {
+    @DisplayName("Should save deal successfully")
+    public void shouldSaveDeal() throws Exception {
         DealRequestDto requestDto = new DealRequestDto();
         DealResponseDto mockResponse = new DealResponseDto();
         when(dealsService.saveDeal(any(DealRequestDto.class))).thenReturn(mockResponse);
 
-        MvcResult result = mvc.perform(MockMvcRequestBuilders.post("/api/deals/create")
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/api/deals/create")
                         .content(asJsonString(requestDto))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -53,14 +55,13 @@ class DealsControllerTest {
 
         MockHttpServletResponse response = result.getResponse();
         ApiResponse apiResponse = new ObjectMapper().readValue(response.getContentAsString(), ApiResponse.class);
-
-
         verify(dealsService, times(1)).saveDeal(any(DealRequestDto.class));
     }
 
 
     @Test
-    public void testGetOneDeal() throws Exception {
+    @DisplayName("Should get details for one deal successfully")
+    public void shouldGetOneDeal() throws Exception {
         String ID_TO_FIND = "kau8-2879-99ij";
         DealResponseDto responseDto = DealResponseDto.builder()
                 .dealUniqueId(ID_TO_FIND)
@@ -68,26 +69,30 @@ class DealsControllerTest {
                 .orderingCurrencyISO("EUR")
                 .amountInOrderingCurrency(new BigDecimal("10000.0"))
                 .build();
-        when(dealsService.getDeal(ID_TO_FIND))
-                .thenReturn(responseDto);
-        mvc.perform(get("/api/deals/" + ID_TO_FIND))
+        when(dealsService.getDeal(ID_TO_FIND)).thenReturn(responseDto);
+
+        mockMvc.perform(get("/api/deals/" + ID_TO_FIND))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.errorList").doesNotExist())
                 .andExpect(jsonPath("$.data.dealUniqueId").value(ID_TO_FIND));
     }
 
+
     @Test
-    public void testGetAllFXDeals() throws Exception {
+    @DisplayName("Should get all FX deals successfully")
+    public void shouldGetAllFXDeals() throws Exception {
+        int page = 0;
+        int size = 10;
         Page<DealResponseDto> mockDealsPage = new PageImpl<>(Collections.emptyList());
-        when(dealsService.getAllDeals(0, 10)).thenReturn(mockDealsPage);
-        mvc.perform(MockMvcRequestBuilders.get("/api/deals")
-                        .param("page", "0")
-                        .param("size", "10")
+        when(dealsService.getAllDeals(page, size)).thenReturn(mockDealsPage);
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/deals")
+                        .param("page", String.valueOf(page))
+                        .param("size", String.valueOf(size))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn();
-        verify(dealsService, times(1)).getAllDeals(0, 10);
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        verify(dealsService, times(1)).getAllDeals(page, size);
     }
 
     private String asJsonString(DealRequestDto deal) {
